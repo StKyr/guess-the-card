@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guess the Card — Home Edition</title>
+  <style>
+    :root {
+      --ink: #19251f;
+      --muted: #66726b;
+      --paper: #fffdf5;
+      --cream: #f6f0df;
+      --green: #1f7a58;
+      --green-dark: #15533d;
+      --red: #c84b4b;
+      --yellow: #f2bd49;
+      --blue: #3778b8;
+      --shadow: 0 18px 55px rgba(38, 47, 41, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(242, 189, 73, .22), transparent 28rem),
+        radial-gradient(circle at 88% 86%, rgba(55, 120, 184, .16), transparent 30rem),
+        var(--cream);
+      font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .27;
+      background-image: radial-gradient(#607066 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(to bottom, black, transparent 75%);
+    }
+
+    button { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .screen {
+      display: none;
+      width: min(100%, 980px);
+      animation: arrive .35s ease both;
+    }
+
+    .screen.active { display: block; }
+
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(10px) scale(.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(28px, 5vw, 56px);
+      border: 1px solid rgba(31, 50, 40, .1);
+      border-radius: 30px;
+      background: rgba(255, 253, 245, .94);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel::after {
+      content: "";
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      right: -60px;
+      top: -70px;
+      border: 24px solid rgba(242, 189, 73, .28);
+      border-radius: 50%;
+      transform: rotate(-15deg);
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--green);
+      font-size: .78rem;
+      font-weight: 850;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, p { margin-top: 0; }
+
+    h1 {
+      max-width: 700px;
+      margin-bottom: 14px;
+      font-size: clamp(3.2rem, 10vw, 7.7rem);
+      line-height: .84;
+      letter-spacing: -.075em;
+    }
+
+    h2 {
+      margin-bottom: 14px;
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: .97;
+      letter-spacing: -.045em;
+    }
+
+    .lead {
+      max-width: 650px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      line-height: 1.55;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: end;
+      margin-top: 38px;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .timer-choice {
+      display: inline-flex;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 16px;
+      background: #eae4d5;
+    }
+
+    .timer-choice button, .card-count-choice button {
+      min-width: 70px;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 850;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .timer-choice button:hover, .card-count-choice button:hover { color: var(--ink); }
+
+    .timer-choice button.selected, .card-count-choice button.selected {
+      color: white;
+      background: var(--green);
+      box-shadow: 0 5px 14px rgba(31, 122, 88, .25);
+    }
+
+    .card-count-choice {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .card-count-choice button {
+      min-width: 0;
+      border-radius: 13px;
+      background: #eae4d5;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .card-count-choice strong, .card-count-choice span { display: block; }
+    .card-count-choice strong { font-size: 1rem; }
+    .card-count-choice span { margin-top: 2px; font-size: .72rem; opacity: .8; }
+
+    .number-input {
+      width: 100%;
+      max-width: 235px;
+      min-height: 56px;
+      padding: 10px 16px;
+      border: 2px solid #ded7c7;
+      border-radius: 16px;
+      color: var(--ink);
+      background: white;
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 850;
+    }
+
+    .number-input:focus, .custom-cards:focus {
+      border-color: var(--green);
+      outline: 4px solid rgba(31, 122, 88, .13);
+    }
+
+    .full-row { grid-column: 1 / -1; }
+
+    .custom-card-box {
+      padding: 18px;
+      border: 1px solid rgba(31, 50, 40, .1);
+      border-radius: 18px;
+      background: rgba(255,255,255,.56);
+    }
+
+    .custom-cards {
+      display: block;
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      padding: 14px 16px;
+      border: 2px solid #ded7c7;
+      border-radius: 14px;
+      color: var(--ink);
+      background: white;
+      font: inherit;
+      line-height: 1.45;
+    }
+
+    .field-help {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 9px 2px 0;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .setup-error {
+      padding: 13px 16px;
+      border: 1px solid rgba(200, 75, 75, .28);
+      border-radius: 14px;
+      color: #8f2d2d;
+      background: rgba(200, 75, 75, .1);
+      font-size: .9rem;
+      font-weight: 750;
+    }
+
+    .primary, .secondary, .action {
+      border: 0;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 900;
+      transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+    }
+
+    .primary:hover, .secondary:hover, .action:hover { filter: brightness(1.04); }
+    .primary:active, .secondary:active, .action:active { transform: translateY(2px) scale(.99); }
+    .primary:focus-visible, .secondary:focus-visible, .action:focus-visible, .timer-choice button:focus-visible, .card-count-choice button:focus-visible {
+      outline: 4px solid rgba(55, 120, 184, .28);
+      outline-offset: 3px;
+    }
+
+    .primary {
+      padding: 17px 30px;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 10px 24px rgba(31, 122, 88, .25);
+      font-size: 1.05rem;
+    }
+
+    .secondary {
+      padding: 14px 22px;
+      color: var(--green-dark);
+      background: #e7eee8;
+    }
+
+    .rules-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .mini-rule {
+      padding: 14px;
+      border: 1px solid rgba(31, 50, 40, .1);
+      border-radius: 14px;
+      background: rgba(255,255,255,.56);
+      font-size: .88rem;
+    }
+
+    .mini-rule strong { display: block; margin-bottom: 3px; }
+
+    .handoff {
+      text-align: center;
+    }
+
+    .handoff .player-badge {
+      display: inline-grid;
+      place-items: center;
+      width: clamp(108px, 18vw, 150px);
+      aspect-ratio: 1;
+      margin: 18px 0 24px;
+      border: 10px solid rgba(255,255,255,.72);
+      border-radius: 50%;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 18px 35px rgba(31, 122, 88, .24);
+    }
+
+    .player-badge.team-b {
+      background: var(--blue);
+      box-shadow: 0 18px 35px rgba(55, 120, 184, .24);
+    }
+
+    .player-badge span { display: block; }
+    .player-badge .team { font-size: .75rem; font-weight: 850; letter-spacing: .12em; }
+    .player-badge .number { font-size: 3.25rem; font-weight: 950; line-height: 1; }
+
+    .handoff-meta {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 26px;
+    }
+
+    .pill {
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: #ece7d9;
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    .handoff-timer { margin: 0 0 24px; }
+    .handoff-timer .timer-choice button { min-width: 60px; padding: 8px 12px; }
+
+    .game-shell {
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .round-label strong { display: block; font-size: 1.05rem; }
+    .round-label span { color: var(--muted); font-size: .86rem; }
+
+    .clock {
+      --progress: 100%;
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 84px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) var(--progress), #ddd8ca 0);
+      transition: background .1s linear;
+    }
+
+    .clock::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: var(--paper);
+    }
+
+    .clock.urgent { background: conic-gradient(var(--red) var(--progress), #ddd8ca 0); }
+
+    .clock-number {
+      position: relative;
+      z-index: 1;
+      font-size: 1.45rem;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cards-left { text-align: right; }
+
+    .cards-left strong { display: block; font-size: 1.1rem; }
+    .cards-left span { color: var(--muted); font-size: .82rem; }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .team-score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 15px;
+      background: rgba(255,255,255,.66);
+      border: 1px solid rgba(31, 50, 40, .09);
+    }
+
+    .team-score.playing { box-shadow: inset 0 0 0 2px var(--green); }
+    .team-score.playing.team-b { box-shadow: inset 0 0 0 2px var(--blue); }
+    .team-score span { color: var(--muted); font-weight: 850; }
+    .team-score strong { font-size: 1.55rem; }
+
+    .card-stage {
+      display: grid;
+      place-items: center;
+      min-height: clamp(260px, 45vh, 410px);
+      padding: 28px;
+      overflow: hidden;
+      border: 1px solid rgba(31, 50, 40, .1);
+      border-radius: 28px;
+      background: rgba(255, 253, 245, .95);
+      box-shadow: var(--shadow);
+    }
+
+    .playing-card {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: min(100%, 620px);
+      min-height: clamp(190px, 30vh, 280px);
+      padding: 30px;
+      border: 2px solid rgba(31, 50, 40, .12);
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, transparent 74%, rgba(242, 189, 73, .22) 74%),
+        white;
+      box-shadow: 0 16px 35px rgba(41, 49, 44, .12), 8px 8px 0 #e5ddc7;
+      text-align: center;
+    }
+
+    .playing-card::before {
+      content: "GUESS THE CARD";
+      position: absolute;
+      left: 18px;
+      top: 15px;
+      color: var(--green);
+      font-size: .64rem;
+      font-weight: 950;
+      letter-spacing: .15em;
+    }
+
+    .card-name {
+      font-size: clamp(2.15rem, 7vw, 5.25rem);
+      font-weight: 950;
+      line-height: .98;
+      letter-spacing: -.05em;
+      text-wrap: balance;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .actions.with-pass { grid-template-columns: 1fr 1fr 1fr; }
+
+    .action {
+      min-height: 70px;
+      padding: 14px 18px;
+      color: white;
+      font-size: clamp(.95rem, 2vw, 1.12rem);
+      box-shadow: 0 8px 18px rgba(31, 50, 40, .12);
+    }
+
+    .action small {
+      display: block;
+      margin-top: 2px;
+      opacity: .75;
+      font-size: .7rem;
+      font-weight: 750;
+    }
+
+    .guessed { background: var(--green); }
+    .burn { background: var(--red); }
+    .pass { background: #9a741d; }
+    .hidden { display: none !important; }
+
+    .summary-scores {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 24px;
+      max-width: 600px;
+      margin: 32px auto;
+      text-align: center;
+    }
+
+    .summary-team {
+      padding: 20px 10px;
+      border-radius: 20px;
+      background: #efeadc;
+    }
+
+    .summary-team span { display: block; color: var(--muted); font-weight: 800; }
+    .summary-team strong { font-size: clamp(2.8rem, 8vw, 5rem); line-height: 1; }
+    .dash { color: var(--muted); font-weight: 900; }
+
+    .round-breakdown {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    .summary-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 20;
+      padding: 11px 16px;
+      border-radius: 999px;
+      color: white;
+      background: rgba(25, 37, 31, .9);
+      box-shadow: 0 8px 24px rgba(0,0,0,.17);
+      font-size: .86rem;
+      font-weight: 800;
+      transform: translate(-50%, 20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    @media (max-width: 640px) {
+      .app { padding: 12px; }
+      .panel { border-radius: 23px; padding: 26px 20px; }
+      .setup-grid { grid-template-columns: 1fr; align-items: stretch; }
+      .setup-grid .primary { width: 100%; }
+      .rules-strip { grid-template-columns: 1fr; }
+      .card-count-choice { grid-template-columns: repeat(2, 1fr); }
+      .topbar { grid-template-columns: 1fr auto 1fr; }
+      .clock { width: 68px; }
+      .actions, .actions.with-pass { grid-template-columns: 1fr; }
+      .action { min-height: 58px; }
+      .scoreboard { gap: 6px; }
+      .team-score { padding: 10px 12px; }
+      .summary-scores { gap: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="screen active" id="setup-screen">
+      <div class="panel">
+        <p class="eyebrow">Home edition · 168 built-in cards</p>
+        <h1>Guess the<br>Card!</h1>
+        <p class="lead">Two teams, your choice of team size, and the same deck through three increasingly chaotic rounds.</p>
+
+        <div class="setup-grid">
+          <div>
+            <label class="label" for="players-per-team">Players per team</label>
+            <input class="number-input" id="players-per-team" type="number" min="1" max="5" step="1" value="3">
+          </div>
+          <div>
+            <span class="label">Turn length</span>
+            <div class="timer-choice" data-timer-picker>
+              <button type="button" data-seconds="30">30s</button>
+              <button type="button" class="selected" data-seconds="60">60s</button>
+              <button type="button" data-seconds="90">90s</button>
+            </div>
+          </div>
+          <div class="full-row">
+            <span class="label">Cards this game</span>
+            <div class="card-count-choice" data-card-picker>
+              <button type="button" data-multiplier="6"><strong>×6</strong><span>36 cards</span></button>
+              <button type="button" class="selected" data-multiplier="7"><strong>×7</strong><span>42 cards</span></button>
+              <button type="button" data-multiplier="8"><strong>×8</strong><span>48 cards</span></button>
+              <button type="button" data-multiplier="9"><strong>×9</strong><span>54 cards</span></button>
+              <button type="button" data-multiplier="10"><strong>×10</strong><span>60 cards</span></button>
+            </div>
+          </div>
+          <div class="custom-card-box full-row">
+            <label class="label" for="custom-cards">Add your own cards</label>
+            <textarea class="custom-cards" id="custom-cards" placeholder="One card per line…&#10;My friend Alex&#10;The Eiffel Tower&#10;A rubber duck"></textarea>
+            <div class="field-help"><span>One card per line. Custom cards are always included.</span><strong id="deck-count">168 cards in pool</strong></div>
+          </div>
+          <div class="setup-error full-row hidden" id="setup-error" role="alert"></div>
+          <button class="primary full-row" id="play-button" type="button">Play game →</button>
+        </div>
+
+        <div class="rules-strip">
+          <div class="mini-rule"><strong>Round 1</strong>Describe freely. No passing.</div>
+          <div class="mini-rule"><strong>Round 2</strong>One word only. Passing allowed.</div>
+          <div class="mini-rule"><strong>Round 3</strong>Act it out. Passing allowed.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="handoff-screen">
+      <div class="panel handoff">
+        <p class="eyebrow" id="handoff-round">Round 1 · Describe it</p>
+        <h2>Pass the laptop</h2>
+        <p class="lead" style="margin-inline:auto" id="handoff-rule">Say anything except the name.</p>
+        <div class="player-badge" id="player-badge">
+          <div><span class="team" id="badge-team">TEAM A</span><span class="number" id="badge-player">1</span></div>
+        </div>
+        <div class="handoff-meta">
+          <span class="pill" id="handoff-cards">168 cards remain</span>
+          <span class="pill" id="handoff-score">A 0 · 0 B</span>
+        </div>
+        <div class="handoff-timer">
+          <span class="label">Turn length</span>
+          <div class="timer-choice" data-timer-picker>
+            <button type="button" data-seconds="30">30s</button>
+            <button type="button" data-seconds="60">60s</button>
+            <button type="button" data-seconds="90">90s</button>
+          </div>
+        </div>
+        <button class="primary" id="start-turn-button" type="button">I’m ready — start turn</button>
+      </div>
+    </section>
+
+    <section class="screen" id="game-screen">
+      <div class="game-shell">
+        <div class="topbar">
+          <div class="round-label"><strong id="game-round">Round 1</strong><span id="game-player">Team A · Player 1</span></div>
+          <div class="clock" id="clock"><span class="clock-number" id="clock-number">60</span></div>
+          <div class="cards-left"><strong id="cards-left-number">168</strong><span>cards left</span></div>
+        </div>
+
+        <div class="scoreboard">
+          <div class="team-score" id="team-a-score"><span>Team A</span><strong id="score-a">0</strong></div>
+          <div class="team-score team-b" id="team-b-score"><span>Team B</span><strong id="score-b">0</strong></div>
+        </div>
+
+        <div class="card-stage">
+          <article class="playing-card"><div class="card-name" id="card-name"></div></article>
+        </div>
+
+        <div class="actions" id="actions">
+          <button class="action guessed" id="guessed-button" type="button">✓ Guessed<small>Keyboard: G</small></button>
+          <button class="action burn" id="burn-button" type="button">✕ Burn<small>Point goes to opponent · B</small></button>
+          <button class="action pass hidden" id="pass-button" type="button">↷ Pass<small>Move to bottom · P</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="summary-screen">
+      <div class="panel handoff">
+        <p class="eyebrow" id="summary-eyebrow">Round complete</p>
+        <h2 id="summary-title">Nice round!</h2>
+        <p class="lead" style="margin-inline:auto" id="summary-copy"></p>
+        <div class="summary-scores">
+          <div class="summary-team"><span>Team A</span><strong id="summary-a">0</strong><div class="round-breakdown" id="round-a">+0 this round</div></div>
+          <div class="dash">—</div>
+          <div class="summary-team"><span>Team B</span><strong id="summary-b">0</strong><div class="round-breakdown" id="round-b">+0 this round</div></div>
+        </div>
+        <div class="summary-actions">
+          <button class="primary" id="continue-button" type="button">Start next round →</button>
+          <button class="secondary hidden" id="new-game-button" type="button">Play again</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const ORIGINAL_CARDS = [
+  "Cristiano Ronaldo",
+  "Lionel Messi",
+  "Taylor Swift",
+  "Beyoncé",
+  "Justin Bieber",
+  "Rihanna",
+  "Dwayne Johnson",
+  "Selena Gomez",
+  "Ariana Grande",
+  "Kim Kardashian",
+  "Neymar",
+  "Shakira",
+  "Jennifer Lopez",
+  "Kylie Jenner",
+  "Drake",
+  "Billie Eilish",
+  "Miley Cyrus",
+  "Katy Perry",
+  "LeBron James",
+  "David Beckham",
+  "Snoop Dogg",
+  "Dua Lipa",
+  "Zendaya",
+  "Kylian Mbappé",
+  "MrBeast",
+  "Vin Diesel",
+  "Gal Gadot",
+  "Kevin Hart",
+  "Cardi B",
+  "Ellen DeGeneres",
+  "Chris Brown",
+  "Demi Lovato",
+  "Priyanka Chopra",
+  "Virat Kohli",
+  "Kendall Jenner",
+  "Khloé Kardashian",
+  "Kourtney Kardashian",
+  "Jesus Christ",
+  "Muhammad",
+  "Gautama Buddha",
+  "William Shakespeare",
+  "Albert Einstein",
+  "Napoleon Bonaparte",
+  "Adolf Hitler",
+  "Julius Caesar",
+  "Alexander the Great",
+  "Abraham Lincoln",
+  "Mahatma Gandhi",
+  "Leonardo da Vinci",
+  "Isaac Newton",
+  "Charles Darwin",
+  "Christopher Columbus",
+  "George Washington",
+  "Joseph Stalin",
+  "Nelson Mandela",
+  "Martin Luther King Jr.",
+  "Winston Churchill",
+  "Karl Marx",
+  "Aristotle",
+  "Plato",
+  "Ludwig van Beethoven",
+  "Wolfgang Amadeus Mozart",
+  "Galileo Galilei",
+  "Genghis Khan",
+  "Queen Victoria",
+  "Henry VIII",
+  "John F. Kennedy",
+  "Neil Armstrong",
+  "Thomas Edison",
+  "Benjamin Franklin",
+  "Sigmund Freud",
+  "Vladimir Lenin",
+  "Charlemagne",
+  "Louis XIV",
+  "Franklin D. Roosevelt",
+  "Johann Sebastian Bach",
+  "Charles Dickens",
+  "Mark Twain",
+  "Edgar Allan Poe",
+  "Friedrich Nietzsche",
+  "Donald Trump",
+  "Barack Obama",
+  "Vladimir Putin",
+  "Joe Biden",
+  "Mustafa Kemal Atatürk",
+  "Ronald Reagan",
+  "Theodore Roosevelt",
+  "Thomas Jefferson",
+  "George W. Bush",
+  "Bill Clinton",
+  "Angela Merkel",
+  "Emmanuel Macron",
+  "Narendra Modi",
+  "Hillary Clinton",
+  "Boris Johnson",
+  "Buzz Aldrin",
+  "Alexander Hamilton",
+  "Mickey Mouse",
+  "Superman",
+  "Batman",
+  "Mario",
+  "Bugs Bunny",
+  "The Joker",
+  "Pikachu",
+  "Darth Vader",
+  "SpongeBob SquarePants",
+  "James Bond",
+  "Spider-Man",
+  "Tom and Jerry",
+  "Harry Potter",
+  "Barbie",
+  "Homer Simpson",
+  "Shrek",
+  "Winnie the Pooh",
+  "Scooby-Doo",
+  "Cinderella",
+  "Sherlock Holmes",
+  "Dracula",
+  "Peter Pan",
+  "Indiana Jones",
+  "Mary Poppins",
+  "King Kong",
+  "Godzilla",
+  "Tarzan",
+  "Yoda",
+  "Gandalf",
+  "Iron Man",
+  "The Hulk",
+  "Captain America",
+  "Wonder Woman",
+  "Wolverine",
+  "Sonic the Hedgehog",
+  "Goku",
+  "E.T.",
+  "Popeye",
+  "Charlie Brown",
+  "Bambi",
+  "Willy Wonka",
+  "The Grinch",
+  "Kermit the Frog",
+  "Daffy Duck",
+  "Bart Simpson",
+  "Fred Flintstone",
+  "Big Bird",
+  "Rocky Balboa",
+  "Vito Corleone",
+  "The Terminator",
+  "Hannibal Lecter",
+  "Tony Montana",
+  "Jon Snow",
+  "Walter White",
+  "Michael Scott",
+  "Eric Cartman",
+  "Freddy Krueger",
+  "Jason Voorhees",
+  "Katniss Everdeen",
+  "Marty McFly",
+  "Spock",
+  "Dorothy Gale",
+  "Snow White",
+  "Robin Hood",
+  "Pinocchio",
+  "Alice in Wonderland",
+  "Frankenstein",
+  "Santa Claus",
+  "Romeo and Juliet",
+  "Hamlet",
+  "Ebenezer Scrooge",
+  "The Mad Hatter",
+  "Quasimodo",
+  "Zorro",
+  "Optimus Prime",
+  "Princess Elsa",
+  "The Minions",
+  "Peppa Pig",
+  "Dora the Explorer",
+  "Pac-Man",
+  "Bluey",
+  "Naruto",
+  "Monkey D. Luffy",
+  "Sailor Moon",
+  "Hercule Poirot",
+  "Tyrion Lannister",
+  "Daenerys Targaryen",
+  "The Genie from Aladdin",
+  "Tyler Durden",
+  "HAL 9000",
+  "Scarlett O’Hara",
+  "Tony Soprano",
+  "Norman Bates",
+  "Charles Foster Kane",
+  "Rick Blaine",
+  "Jay Gatsby",
+  "Lassie",
+  "Atticus Finch",
+  "The Dude",
+  "Jules Winnfield",
+  "John McClane",
+  "Ellen Ripley",
+  "Edward Scissorhands",
+  "Buffy Summers",
+  "Betty Boop",
+  "Bilbo Baggins",
+  "Travis Bickle",
+  "Lucy Ricardo",
+  "Peter Griffin",
+  "Thomas the Tank Engine",
+  "Waldo/Wally",
+  "Cersei Lannister",
+  "Regina George",
+  "Astro Boy",
+  "Odysseus",
+  "Don Quixote",
+  "Oliver Twist",
+  "Tom Sawyer",
+  "Huckleberry Finn",
+  "Anna Karenina",
+  "Long John Silver",
+  "The Headless Horseman",
+  "The Tooth Fairy",
+  "Sweeney Todd",
+  "Steven Spielberg",
+  "Alfred Hitchcock",
+  "Martin Scorsese",
+  "Quentin Tarantino",
+  "Stanley Kubrick",
+  "Francis Ford Coppola",
+  "George Lucas",
+  "James Cameron",
+  "Christopher Nolan",
+  "Walt Disney",
+  "Tom Hanks",
+  "Leonardo DiCaprio",
+  "Brad Pitt",
+  "Angelina Jolie",
+  "Johnny Depp",
+  "Robert De Niro",
+  "Al Pacino",
+  "Meryl Streep",
+  "Marilyn Monroe",
+  "Audrey Hepburn",
+  "Charlie Chaplin",
+  "Arnold Schwarzenegger",
+  "Sylvester Stallone",
+  "Morgan Freeman",
+  "Tom Cruise",
+  "Will Smith",
+  "Jackie Chan",
+  "Bruce Lee",
+  "Jim Carrey",
+  "Robin Williams",
+  "Elvis Presley",
+  "John Lennon",
+  "Paul McCartney",
+  "Freddie Mercury",
+  "Mick Jagger",
+  "David Bowie",
+  "Elton John",
+  "Jimi Hendrix",
+  "Kurt Cobain",
+  "Ozzy Osbourne",
+  "Bob Dylan",
+  "Bruce Springsteen",
+  "Michael Jackson",
+  "Madonna",
+  "Britney Spears",
+  "Lady Gaga",
+  "Adele",
+  "Whitney Houston",
+  "Mariah Carey",
+  "Celine Dion",
+  "Cher",
+  "Ed Sheeran",
+  "Bruno Mars",
+  "George Michael",
+  "Eminem",
+  "Tupac Shakur",
+  "Jay-Z",
+  "Louis Armstrong",
+  "Ella Fitzgerald",
+  "Miles Davis",
+  "Michael Jordan",
+  "Muhammad Ali",
+  "Usain Bolt",
+  "Serena Williams",
+  "Roger Federer",
+  "Rafael Nadal",
+  "Michael Phelps",
+  "Tiger Woods",
+  "James Clerk Maxwell",
+  "Stephen Hawking",
+  "Alan Turing",
+  "J. Robert Oppenheimer",
+  "Dmitri Mendeleev",
+  "Alexander Fleming",
+  "Niccolò Machiavelli",
+  "Marie Curie",
+  "Ada Lovelace",
+  "Rosalind Franklin",
+  "Hypatia",
+  "Nikola Tesla",
+  "Nicolaus Copernicus",
+  "Louis Pasteur",
+  "Erwin Schrödinger",
+  "Hercules",
+  "Achilles",
+  "Thor",
+  "Odin",
+  "Helen of Troy",
+  "Joan of Arc",
+  "Cleopatra",
+  "Rosa Parks",
+  "Amelia Earhart",
+  "Marco Polo",
+  "Ferdinand Magellan",
+  "Vasco da Gama",
+  "Florence Nightingale",
+  "Anne Frank",
+  "Harriet Tubman",
+  "Frida Kahlo",
+  "Coco Chanel",
+  "Margaret Thatcher",
+  "Queen Elizabeth II",
+  "Catherine the Great",
+  "Arthur Conan Doyle",
+  "J. K. Rowling",
+  "George R. R. Martin",
+  "J. R. R. Tolkien",
+  "C. S. Lewis",
+  "Jane Austen",
+  "Agatha Christie",
+  "Ernest Hemingway",
+  "George Orwell",
+  "Victor Hugo",
+  "Leo Tolstoy",
+  "Fyodor Dostoevsky",
+  "Virginia Woolf",
+  "Gabriel García Márquez",
+  "Stephen King",
+  "Ian Fleming",
+  "Oscar Wilde",
+  "Giannis Antetokounmpo",
+  "Stefanos Tsitsipas",
+  "Maria Sakkari",
+  "Miltos Tentoglou",
+  "Katerina Stefanidi",
+  "Lefteris Petrounias",
+  "Vassilis Spanoulis",
+  "Giorgos Printezis",
+  "Giorgos Karagounis",
+  "Jennifer Aniston",
+  "Zach Galifianakis",
+  "Yorgos Lanthimos",
+  "Christopher Papakaliatis",
+  "Eleni Menegaki",
+  "Nikos Moutsinas",
+  "Grigoris Arnaoutoglou",
+  "Haris Romas",
+  "Giannis Bezos",
+  "Eleni Rantou",
+  "Smaragda Karydi",
+  "Nana Mouskouri",
+  "Demis Roussos",
+  "Anna Vissi",
+  "Sakis Rouvas",
+  "Despina Vandi",
+  "Haris Alexiou",
+  "Marinella",
+  "Giorgos Dalaras",
+  "Alkistis Protopsalti",
+  "Notis Sfakianakis",
+  "Antonis Remos",
+  "Nikos Vertis",
+  "Paola",
+  "Konstantinos Argiros",
+  "Helena Paparizou",
+  "Marina Satti",
+  "Natasa Theodoridou",
+  "Eleftheria Arvanitaki",
+  "Nikos Oikonomopoulos",
+  "Giorgos Mazonakis",
+  "Eleni Foureira",
+  "Dimitris Mitropanos",
+  "Vassilis Karras",
+  "Giannis Parios",
+  "Georgios Papanikolaou",
+  "Theodoros Kolokotronis",
+  "Constantine Karamanlis",
+  "Socrates",
+  "Eleftherios Venizelos",
+  "Ioannis Kapodistrias",
+  "Pericles",
+  "Mikis Theodorakis",
+  "Melina Mercouri",
+  "Andreas Papandreou",
+  "Nikos Kazantzakis",
+  "Odysseas Elytis",
+  "Homer",
+  "Manos Hadjidakis",
+  "Leonidas I of Sparta",
+  "Hippocrates",
+  "Pythagoras",
+  "Constantine P. Cavafy",
+  "Maria Callas",
+  "Archimedes",
+  "Aristotle Onassis",
+  "Charilaos Trikoupis",
+  "El Greco",
+  "Constantine XI Palaiologos",
+  "Giorgos Seferis",
+  "Rigas Feraios",
+  "Aris Velouchiotis",
+  "Ioannis Metaxas",
+  "Nikos Galis",
+  "Georgios Karaiskakis",
+  "Democritus",
+  "Dionysios Solomos",
+  "Adamantios Korais",
+  "Yiannis Ritsos",
+  "Themistocles",
+  "Heraclitus",
+  "Thucydides",
+  "Euclid",
+  "Pavlos Melas",
+  "Archbishop Christodoulos",
+  "Athanasios Diakos",
+  "Theodoros Zagorakis",
+  "Phidias",
+  "Aristophanes",
+  "Kostis Palamas",
+  "Sophocles",
+  "Cornelius Castoriadis",
+  "George Papandreou Sr.",
+  "Georgios Papadopoulos",
+  "Alexandros Papadiamantis",
+  "Otto of Greece",
+  "Vangelis",
+  "Solon",
+  "Cleisthenes",
+  "Aeschylus",
+  "Constantine the Great",
+  "Nikolaos Plastiras",
+  "Nikos Xylouris",
+  "Stelios Kazantzidis",
+  "Euripides",
+  "Justinian I",
+  "Lakis Lazopoulos",
+  "Herodotus",
+  "Thanasis Veggos",
+  "Helene Glykatzi-Ahrweiler",
+  "Aliki Vougiouklaki",
+  "Markos Vamvakaris",
+  "Grigoris Lambrakis",
+  "Vassilis Tsitsanis",
+  "Pyrros Dimas",
+  "Manos Loïzos",
+  "Manolis Glezos",
+  "Philip II of Macedon",
+  "Laskarina Bouboulina",
+  "Thales of Miletus",
+  "Praxiteles"
+];
+
+
+    const ROUND_INFO = {
+      1: { title: "Describe it", rule: "Say anything except the name. Passing is not allowed." },
+      2: { title: "One word", rule: "Give exactly one word. Passing is allowed." },
+      3: { title: "Act it out", rule: "No words or sounds. Passing is allowed." }
+    };
+
+    const state = {
+      duration: 60,
+      playersPerTeam: 3,
+      cardMultiplier: 7,
+      round: 1,
+      turnIndex: 0,
+      deck: [],
+      gameCards: [],
+      turnOrder: [],
+      scores: { A: 0, B: 0 },
+      roundScores: { A: 0, B: 0 },
+      active: false,
+      deadline: 0,
+      timer: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function showScreen(id) {
+      $$(".screen").forEach(screen => screen.classList.toggle("active", screen.id === id));
+    }
+
+    function currentTurn() {
+      return state.turnOrder[state.turnIndex];
+    }
+
+    function buildTurnOrder(playersPerTeam) {
+      return Array.from({ length: playersPerTeam }, (_, index) => [
+        { team: "A", player: index + 1 },
+        { team: "B", player: index + 1 }
+      ]).flat();
+    }
+
+    function readCustomCards() {
+      const seen = new Set(ORIGINAL_CARDS.map(card => card.toLocaleLowerCase()));
+      return $("#custom-cards").value
+        .split(/\r?\n/)
+        .map(card => card.trim())
+        .filter(card => {
+          const key = card.toLocaleLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+    }
+
+    function updateDeckCount() {
+      const customCount = readCustomCards().length;
+      const total = ORIGINAL_CARDS.length + customCount;
+      $("#deck-count").textContent = `${total} card${total === 1 ? "" : "s"} in pool`;
+    }
+
+    function updateCardOptions() {
+      const rawPlayers = Number($("#players-per-team").value);
+      const playersPerTeam = Number.isInteger(rawPlayers) && rawPlayers >= 1 && rawPlayers <= 5 ? rawPlayers : 3;
+      $$('[data-card-picker] button').forEach(button => {
+        const multiplier = Number(button.dataset.multiplier);
+        const total = playersPerTeam * 2 * multiplier;
+        button.querySelector("span").textContent = `${total} cards`;
+        button.classList.toggle("selected", multiplier === state.cardMultiplier);
+      });
+      clearSetupError();
+    }
+
+    function selectCardMultiplier(multiplier) {
+      state.cardMultiplier = multiplier;
+      updateCardOptions();
+    }
+
+    function showSetupError(message) {
+      $("#setup-error").textContent = message;
+      $("#setup-error").classList.remove("hidden");
+    }
+
+    function clearSetupError() {
+      $("#setup-error").textContent = "";
+      $("#setup-error").classList.add("hidden");
+    }
+
+    function opponent(team) {
+      return team === "A" ? "B" : "A";
+    }
+
+    function selectDuration(seconds) {
+      if (state.active) return;
+      state.duration = seconds;
+      $$('[data-timer-picker] button').forEach(button => {
+        button.classList.toggle("selected", Number(button.dataset.seconds) === seconds);
+      });
+    }
+
+    function startGame() {
+      stopTimer();
+      clearSetupError();
+      const playersPerTeam = Number($("#players-per-team").value);
+      if (!Number.isInteger(playersPerTeam) || playersPerTeam < 1 || playersPerTeam > 5) {
+        showSetupError("Choose a whole number from 1 to 5 players per team.");
+        return;
+      }
+
+      const customCards = readCustomCards();
+      const fullPool = [...ORIGINAL_CARDS, ...customCards];
+      const requestedCards = playersPerTeam * 2 * state.cardMultiplier;
+      if (requestedCards > fullPool.length) {
+        showSetupError(`This game needs ${requestedCards} cards, but the pool has only ${fullPool.length}. Choose fewer cards or add ${requestedCards - fullPool.length} more.`);
+        return;
+      }
+      if (customCards.length > requestedCards) {
+        showSetupError(`You added ${customCards.length} custom cards, but this game has room for ${requestedCards}. Remove some custom cards or choose a larger game.`);
+        return;
+      }
+
+      const builtInCardsNeeded = requestedCards - customCards.length;
+      const gameCards = [...customCards, ...shuffle(ORIGINAL_CARDS).slice(0, builtInCardsNeeded)];
+      Object.assign(state, {
+        playersPerTeam,
+        round: 1,
+        turnIndex: 0,
+        deck: shuffle(gameCards),
+        gameCards,
+        turnOrder: buildTurnOrder(playersPerTeam),
+        scores: { A: 0, B: 0 },
+        roundScores: { A: 0, B: 0 },
+        active: false
+      });
+      showHandoff();
+    }
+
+    function showHandoff() {
+      state.active = false;
+      const turn = currentTurn();
+      const info = ROUND_INFO[state.round];
+      $("#handoff-round").textContent = `Round ${state.round} · ${info.title}`;
+      $("#handoff-rule").textContent = info.rule;
+      $("#badge-team").textContent = `TEAM ${turn.team}`;
+      $("#badge-player").textContent = turn.player;
+      $("#player-badge").classList.toggle("team-b", turn.team === "B");
+      $("#handoff-cards").textContent = `${state.deck.length} card${state.deck.length === 1 ? "" : "s"} remain`;
+      $("#handoff-score").textContent = `A ${state.scores.A} · ${state.scores.B} B`;
+      selectDuration(state.duration);
+      showScreen("handoff-screen");
+    }
+
+    function startTurn() {
+      state.active = true;
+      state.deadline = performance.now() + state.duration * 1000;
+      renderGame();
+      showScreen("game-screen");
+      tick();
+    }
+
+    function renderGame() {
+      const turn = currentTurn();
+      $("#game-round").textContent = `Round ${state.round} · ${ROUND_INFO[state.round].title}`;
+      $("#game-player").textContent = `Team ${turn.team} · Player ${turn.player}`;
+      $("#card-name").textContent = state.deck[0] || "";
+      $("#cards-left-number").textContent = state.deck.length;
+      $("#score-a").textContent = state.scores.A;
+      $("#score-b").textContent = state.scores.B;
+      $("#team-a-score").classList.toggle("playing", turn.team === "A");
+      $("#team-b-score").classList.toggle("playing", turn.team === "B");
+      const passingAllowed = state.round > 1;
+      $("#pass-button").classList.toggle("hidden", !passingAllowed);
+      $("#actions").classList.toggle("with-pass", passingAllowed);
+    }
+
+    function tick() {
+      if (!state.active) return;
+      if (state.timer) window.clearTimeout(state.timer);
+      state.timer = null;
+      const remainingMs = Math.max(0, state.deadline - performance.now());
+      const seconds = Math.ceil(remainingMs / 1000);
+      const progress = Math.max(0, (remainingMs / (state.duration * 1000)) * 100);
+      $("#clock-number").textContent = seconds;
+      $("#clock").style.setProperty("--progress", `${progress}%`);
+      $("#clock").classList.toggle("urgent", seconds <= 10);
+
+      if (remainingMs <= 0) {
+        endTurn();
+        return;
+      }
+      state.timer = window.setTimeout(tick, 100);
+    }
+
+    function stopTimer() {
+      state.active = false;
+      if (state.timer) window.clearTimeout(state.timer);
+      state.timer = null;
+    }
+
+    function handleCard(action) {
+      if (!state.active || !state.deck.length) return;
+      const turn = currentTurn();
+
+      if (action === "guessed") {
+        state.deck.shift();
+        state.scores[turn.team] += 1;
+        state.roundScores[turn.team] += 1;
+        flash(`Point for Team ${turn.team}!`);
+      } else if (action === "burn") {
+        state.deck.shift();
+        const other = opponent(turn.team);
+        state.scores[other] += 1;
+        state.roundScores[other] += 1;
+        flash(`Burned — point for Team ${other}`);
+      } else if (action === "pass" && state.round > 1) {
+        state.deck.push(state.deck.shift());
+        flash("Card moved to the bottom");
+      } else {
+        return;
+      }
+
+      if (state.deck.length === 0) finishRound();
+      else renderGame();
+    }
+
+    function advancePlayer() {
+      state.turnIndex = (state.turnIndex + 1) % state.turnOrder.length;
+    }
+
+    function endTurn() {
+      if (!state.active) return;
+      stopTimer();
+      if (state.deck.length > 1) state.deck.push(state.deck.shift());
+      advancePlayer();
+      showHandoff();
+    }
+
+    function finishRound() {
+      stopTimer();
+      advancePlayer();
+      showSummary(false);
+    }
+
+    function showSummary(gameOver) {
+      $("#summary-a").textContent = state.scores.A;
+      $("#summary-b").textContent = state.scores.B;
+      $("#round-a").textContent = `+${state.roundScores.A} this round`;
+      $("#round-b").textContent = `+${state.roundScores.B} this round`;
+
+      if (gameOver || state.round === 3) {
+        const tied = state.scores.A === state.scores.B;
+        const winner = state.scores.A > state.scores.B ? "A" : "B";
+        $("#summary-eyebrow").textContent = "Game complete";
+        $("#summary-title").textContent = tied ? "It’s a tie!" : `Team ${winner} wins!`;
+        $("#summary-copy").textContent = tied ? "Perfectly balanced. One sudden-death card, perhaps?" : "Three rounds, one glorious victory.";
+        $("#continue-button").classList.add("hidden");
+        $("#new-game-button").classList.remove("hidden");
+      } else {
+        const next = ROUND_INFO[state.round + 1];
+        $("#summary-eyebrow").textContent = `Round ${state.round} complete`;
+        $("#summary-title").textContent = "The deck is cleared!";
+        $("#summary-copy").textContent = `Next: ${next.title}. ${next.rule}`;
+        $("#continue-button").textContent = `Start round ${state.round + 1} →`;
+        $("#continue-button").classList.remove("hidden");
+        $("#new-game-button").classList.add("hidden");
+      }
+      showScreen("summary-screen");
+    }
+
+    function nextRound() {
+      state.round += 1;
+      state.deck = shuffle(state.gameCards);
+      state.roundScores = { A: 0, B: 0 };
+      showHandoff();
+    }
+
+    let toastTimer;
+    function flash(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove("show"), 850);
+    }
+
+    $$('[data-timer-picker] button').forEach(button => {
+      button.addEventListener("click", () => selectDuration(Number(button.dataset.seconds)));
+    });
+    $$('[data-card-picker] button').forEach(button => {
+      button.addEventListener("click", () => selectCardMultiplier(Number(button.dataset.multiplier)));
+    });
+    $("#players-per-team").addEventListener("input", updateCardOptions);
+    $("#custom-cards").addEventListener("input", () => {
+      updateDeckCount();
+      clearSetupError();
+    });
+    $("#play-button").addEventListener("click", startGame);
+    $("#start-turn-button").addEventListener("click", startTurn);
+    $("#guessed-button").addEventListener("click", () => handleCard("guessed"));
+    $("#burn-button").addEventListener("click", () => handleCard("burn"));
+    $("#pass-button").addEventListener("click", () => handleCard("pass"));
+    $("#continue-button").addEventListener("click", nextRound);
+    $("#new-game-button").addEventListener("click", () => showScreen("setup-screen"));
+
+    document.addEventListener("keydown", event => {
+      if (event.repeat) return;
+      if (state.active && event.key.toLowerCase() === "g") handleCard("guessed");
+      if (state.active && event.key.toLowerCase() === "b") handleCard("burn");
+      if (state.active && event.key.toLowerCase() === "p") handleCard("pass");
+      if (!state.active && event.code === "Space" && $("#handoff-screen").classList.contains("active")) {
+        event.preventDefault();
+        startTurn();
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && state.active) tick();
+    });
+
+    window.addEventListener("beforeunload", stopTimer);
+    selectDuration(60);
+    updateDeckCount();
+    updateCardOptions();
+  </script>
+</body>
+</html>
